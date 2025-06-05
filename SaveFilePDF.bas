@@ -6,9 +6,10 @@ Sub Save_As_PDF()
     Dim strText As String
     Dim strFilename As String
     Dim cleanFilename As String
-    Dim yearPart As String, namePart As String, acctPart As String
+    Dim yearPart As String, fullNamePart As String, lastName As String, acctPart As String
     Dim parts() As String
     Dim fExists As Boolean
+    Dim i As Integer
 
     '--- 1. Get and parse the content control text ---------------------
     strText = ActiveDocument.SelectContentControlsByTitle("FileName")(1).Range.Text
@@ -16,10 +17,20 @@ Sub Save_As_PDF()
 
     If UBound(parts) = 2 Then
         yearPart = Left(parts(0), 4)            ' e.g., "2024" from "2024Receipt"
-        namePart = parts(1)                     ' e.g., "JohnSmith"
+        fullNamePart = parts(1)                 ' e.g., "JohnSmith"
         acctPart = parts(2)                     ' e.g., "123456"
 
-        cleanFilename = yearPart & " Receipt - " & acctPart & " - " & namePart & ".pdf"
+        ' Extract LastName from FirstLast (JohnSmith ? Smith)
+        For i = 2 To Len(fullNamePart)
+            If Mid(fullNamePart, i, 1) Like "[A-Z]" Then
+                lastName = Mid(fullNamePart, i)
+                Exit For
+            End If
+        Next i
+
+        If lastName = "" Then lastName = fullNamePart ' fallback if no capital found
+
+        cleanFilename = yearPart & " Receipt - " & acctPart & " - " & lastName & ".pdf"
     Else
         MsgBox "Unexpected filename format: " & strText, vbCritical
         Exit Sub
@@ -44,13 +55,9 @@ Sub Save_As_PDF()
         End With
     End If
 
-    '--- 4. Copy file path to clipboard -------------------------------
+    '--- 4. Copy file path to clipboard using Forms DataObject ---------
     Dim Clip As New DataObject
-
-    Clip.Clear
     Clip.SetText strFilename
     Clip.PutInClipboard
-
-    Set Clip = Nothing
 
 End Sub
